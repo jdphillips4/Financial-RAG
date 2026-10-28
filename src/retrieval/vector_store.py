@@ -64,16 +64,20 @@ class VectorStore:
 
     def search(self, query, top_k=5):
         if self.index is None:
-            self.index = faiss.read_index(
-                str(INDEX_PATH)
-            )
+            if INDEX_PATH.exists():
+                self.index = faiss.read_index(
+                    str(INDEX_PATH)
+                )
 
-            with open(
-                CHUNKS_PATH,
-                "r",
-                encoding="utf-8",
-            ) as f:
-                self.chunks = json.load(f)
+                with open(
+                    CHUNKS_PATH,
+                    "r",
+                    encoding="utf-8",
+                ) as f:
+                    self.chunks = json.load(f)
+            else:
+                print("Vector index not found. Building it...")
+                self.build()
 
         query_embedding = self.model.encode(
             [query],
@@ -96,6 +100,9 @@ class VectorStore:
             scores[0],
             indices[0],
         ):
+            if index < 0:
+                continue
+
             result = self.chunks[index].copy()
             result["score"] = float(score)
 

@@ -31,8 +31,8 @@ SEC_HEADERS = {
 }
 
 # Retrieval
-CHUNK_SIZE = 700
-CHUNK_OVERLAP = 100
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 75
 TOP_K = 5
 
 # Embedding model

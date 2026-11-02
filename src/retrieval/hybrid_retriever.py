@@ -1,3 +1,4 @@
+
 from src.retrieval.vector_store import VectorStore
 from src.retrieval.bm25 import BM25Retriever
 
@@ -17,6 +18,7 @@ class HybridRetriever:
         top_k=5,
         vector_weight=0.5,
         keyword_weight=0.5,
+        rrf_k=60,
     ):
         vector_results = self.vector_store.search(
             query,
@@ -30,77 +32,60 @@ class HybridRetriever:
 
         combined = {}
 
-        for result in vector_results:
+        # Add vector search rankings.
+        for rank, result in enumerate(vector_results, start=1):
             chunk_id = result["chunk_id"]
 
             combined.setdefault(
                 chunk_id,
                 {
                     "chunk": result,
-                    "vector_score": 0.0,
-                    "keyword_score": 0.0,
+                    "vector_rank": None,
+                    "keyword_rank": None,
+                    "vector_score": None,
+                    "keyword_score": None,
+                    "rrf_score": 0.0,
                 },
             )
 
-            combined[chunk_id][
-                "vector_score"
-            ] = result["score"]
+            combined[chunk_id]["vector_rank"] = rank
+            combined[chunk_id]["vector_score"] = result["score"]
+            combined[chunk_id]["rrf_score"] += (
+                vector_weight / (rrf_k + rank)
+            )
 
-        for result in keyword_results:
+        # Add keyword search rankings.
+        for rank, result in enumerate(keyword_results, start=1):
             chunk_id = result["chunk_id"]
 
             combined.setdefault(
                 chunk_id,
                 {
                     "chunk": result,
-                    "vector_score": 0.0,
-                    "keyword_score": 0.0,
+                    "vector_rank": None,
+                    "keyword_rank": None,
+                    "vector_score": None,
+                    "keyword_score": None,
+                    "rrf_score": 0.0,
                 },
             )
 
-            combined[chunk_id][
-                "keyword_score"
-            ] = result["score"]
-
-        # Normalize scores separately.
-        vector_scores = [
-            x["vector_score"]
-            for x in combined.values()
-        ]
-
-        keyword_scores = [
-            x["keyword_score"]
-            for x in combined.values()
-        ]
-
-        max_vector = max(vector_scores, default=1.0)
-        max_keyword = max(keyword_scores, default=1.0)
+            combined[chunk_id]["keyword_rank"] = rank
+            combined[chunk_id]["keyword_score"] = result["score"]
+            combined[chunk_id]["rrf_score"] += (
+                keyword_weight / (rrf_k + rank)
+            )
 
         results = []
 
         for item in combined.values():
-            vector_score = (
-                item["vector_score"] / max_vector
-                if max_vector != 0
-                else 0
-            )
-
-            keyword_score = (
-                item["keyword_score"] / max_keyword
-                if max_keyword != 0
-                else 0
-            )
-
-            final_score = (
-                vector_weight * vector_score
-                + keyword_weight * keyword_score
-            )
-
             chunk = item["chunk"].copy()
 
-            chunk["vector_score"] = vector_score
-            chunk["keyword_score"] = keyword_score
-            chunk["hybrid_score"] = final_score
+            chunk["vector_rank"] = item["vector_rank"]
+            chunk["keyword_rank"] = item["keyword_rank"]
+            chunk["vector_score"] = item["vector_score"]
+            chunk["keyword_score"] = item["keyword_score"]
+            chunk["hybrid_score"] = item["rrf_score"]
 
             results.append(chunk)
 

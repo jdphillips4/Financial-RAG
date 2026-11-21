@@ -1,0 +1,6 @@
+{
+  "_note": "Fill in USD per 1M tokens from each provider's current pricing page. Keys match the model name after the provider prefix, e.g. 'gemini-2.5-flash'. Local models (Ollama) cost 0 in API terms; estimate compute separately if you want.",
+  "gemini-2.5-flash": {"input_per_1m": 0.0, "output_per_1m": 0.0},
+  "gpt-4.1-mini": {"input_per_1m": 0.0, "output_per_1m": 0.0},
+  "qwen3:8b": {"input_per_1m": 0.0, "output_per_1m": 0.0}
+}
